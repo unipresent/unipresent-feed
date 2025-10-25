@@ -1,8 +1,11 @@
 name: Generate feed
 on:
   schedule:
-    - cron: "0 3 * * *"  # každý den ve 3:00 ráno
+    - cron: "0 3 * * *"  # každý den ve 3:00
   workflow_dispatch:
+
+permissions:
+  contents: write  # 👈 přidá oprávnění k zápisu do repozitáře
 
 jobs:
   build:

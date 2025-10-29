@@ -1,15 +1,17 @@
 name: Generate feed
+
 on:
   schedule:
-  - cron: "0 7 * * *"
+    - cron: "0 7 * * *" # každý den v 9:00 ráno (UTC +2)
   workflow_dispatch:
 
 permissions:
-  contents: write  # 👈 přidá oprávnění k zápisu do repozitáře
+  contents: write  # umožní zápis do repozitáře
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -22,13 +24,16 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
-      - name: Generate filtered feed
-        run: python filter_feed.py
+      - name: Generate filtered feed + gzip version
+        run: |
+          python filter_feed.py
+          # vytvoření gzip kopie feedu
+          gzip -c feed_instock.xml > feed_instock.xml.gz
 
       - name: Commit and push changes
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
-          git add feed_instock.xml
-          git commit -m "Update feed" || echo "No changes"
+          git add feed_instock.xml feed_instock.xml.gz
+          git commit -m "Update XML and GZIP feed" || echo "No changes"
           git push

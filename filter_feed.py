@@ -16,7 +16,7 @@ for item in items:
     if not re.search(r"<\s*g:availability\s*>\s*in\s*stock\s*<\s*/\s*g:availability\s*>", item, flags=re.I):
         continue
 
-    # Smazat nepotřebné části
+    # Odstranit nepotřebné části
     item = re.sub(r"<\s*g:id\s*>[\s\S]*?<\s*/\s*g:id\s*>", "", item, flags=re.I)
     item = re.sub(r"<\s*g:custom_label_0\s*>[\s\S]*?<\s*/\s*g:custom_label_0\s*>", "", item, flags=re.I)
     item = re.sub(r"<\s*g:custom_label_[2-9]\s*>[\s\S]*?<\s*/\s*g:custom_label_[2-9]\s*>", "", item, flags=re.I)
@@ -27,8 +27,10 @@ for item in items:
     item = re.sub(r"<\s*g:brand\s*>[\s\S]*?<\s*/\s*g:brand\s*>", "", item, flags=re.I)
 
     # Vyčistit přebytečné mezery / prázdné řádky
-    item = re.sub(r">\s+<", "><", item)  # odstraní mezery mezi tagy
-    item = re.sub(r"\n\s*\n", "\n", item.strip())
+    # 1️⃣ odstraní všechny přebytečné mezery mezi značkami
+    item = re.sub(r">\s+<", "><", item)
+    # 2️⃣ odstraní všechny vícenásobné odřádkování
+    item = re.sub(r"\n+", "\n", item.strip())
 
     cleaned_items.append(item.strip())
 
@@ -39,9 +41,12 @@ footer_match = re.search(r"</channel\s*>\s*</rss\s*>\s*$", feed, flags=re.S | re
 header = header_match.group(0) if header_match else '<?xml version="1.0" encoding="utf-8"?><rss xmlns:g="http://base.google.com/ns/1.0" version="2.0"><channel>'
 footer = footer_match.group(0) if footer_match else "</channel></rss>"
 
-# Výsledné XML
+# Složit výsledek
 xml_data = header.strip() + "\n" + "\n".join(cleaned_items) + "\n" + footer.strip()
 
-# Ulož výsledek
+# Finální čištění: odstraní dvojité odřádkování v celém XML
+xml_data = re.sub(r"\n{2,}", "\n", xml_data)
+
+# Uložit
 with open("feed_instock.xml", "w", encoding="utf-8", newline="") as f:
     f.write(xml_data + "\n")

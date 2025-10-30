@@ -17,6 +17,15 @@ for item in items:
     if not re.search(r"<\s*g:availability\s*>\s*in\s*stock\s*<\s*/\s*g:availability\s*>", item, flags=re.I):
         continue
 
+    # Najdi description
+    desc_match = re.search(r"<g:description>([\s\S]*?)</g:description>", item, flags=re.I)
+    if not desc_match:
+        continue  # ⚠️ přeskočit produkty bez <g:description>
+
+    desc = desc_match.group(1).strip()
+    if not desc:
+        continue  # ⚠️ přeskočit produkty s prázdným popisem
+
     # 🧹 Odstranit nepotřebné tagy
     item = re.sub(r"<\s*g:id\s*>[\s\S]*?<\s*/\s*g:id\s*>", "", item, flags=re.I)
     item = re.sub(r"<\s*g:custom_label_[0-9]\s*>[\s\S]*?<\s*/\s*g:custom_label_[0-9]\s*>", "", item, flags=re.I)
@@ -27,26 +36,14 @@ for item in items:
     item = re.sub(r"<\s*g:brand\s*>[\s\S]*?<\s*/\s*g:brand\s*>", "", item, flags=re.I)
     item = re.sub(r"<\s*g:image_link\s*>[\s\S]*?<\s*/\s*g:image_link\s*>", "", item, flags=re.I)
 
-    # ✂️ Vyčistit a zpracovat <g:description>
-    desc_match = re.search(r"<g:description>([\s\S]*?)</g:description>", item, flags=re.I)
-    if desc_match:
-        desc = desc_match.group(1)
+    # ✨ Vyčistit description – HTML značky pryč, text zůstává
+    desc = unescape(desc)
+    desc = re.sub(r"<[^>]+>", " ", desc)
+    desc = re.sub(r"\s{2,}", " ", desc).strip()
 
-        # 1️⃣ převod HTML entit na normální text (např. &lt;li&gt; → <li>)
-        desc = unescape(desc)
-
-        # 2️⃣ odstranit HTML tagy, ale zachovat jejich text
-        desc = re.sub(r"<[^>]+>", " ", desc)
-
-        # 3️⃣ odstranit vícenásobné mezery a zarovnat text
-        desc = re.sub(r"\s{2,}", " ", desc).strip()
-
-        # 4️⃣ zkrátit pouze pokud je popis příliš dlouhý
-        if len(desc) > 600:
-            desc = desc[:600].rsplit(" ", 1)[0] + "..."
-
-        item = re.sub(r"<g:description>[\s\S]*?</g:description>",
-                      f"<g:description>{desc}</g:description>", item, flags=re.I)
+    # ✏️ Vložit zpět vyčištěný popis (bez zkrácení!)
+    item = re.sub(r"<g:description>[\s\S]*?</g:description>",
+                  f"<g:description>{desc}</g:description>", item, flags=re.I)
 
     # 🧩 Vyčistit mezery mezi značkami
     item = re.sub(r">\s+<", "><", item)
@@ -67,6 +64,6 @@ xml_data = header.strip() + "".join(cleaned_items) + footer.strip()
 with open("feed_instock.xml", "w", encoding="utf-8", newline="") as f:
     f.write(xml_data)
 
-# 📏 Výpis velikosti
+# 📏 Výpis velikosti a počtu produktů
 size_mb = os.path.getsize("feed_instock.xml") / (1024 * 1024)
-print(f"✅ Hotovo – feed_instock.xml ({size_mb:.2f} MB)")
+print(f"✅ Hotovo – feed_instock.xml ({size_mb:.2f} MB, {len(cleaned_items)} produktů)")
